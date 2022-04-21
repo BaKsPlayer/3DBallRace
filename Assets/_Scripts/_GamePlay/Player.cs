@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -6,12 +8,13 @@ using UnityEngine.Events;
 [RequireComponent(typeof(KeyboardInput))]
 public class Player : MonoBehaviour
 {
+    [SerializeField] private PlayModeView _view;
     [SerializeField] private Transform _spawn;
     [SerializeField] private LayerMask _ground;
 
-    public float LifeTime { get; private set; }
+    public float Lifetime { get; private set; }
 
-    public event UnityAction<GameResult> OnGameOver;
+    public event UnityAction<GameResults> OnGameOver;
     public event UnityAction OnLifeTimeChanged;
 
     private PhysicsMovement _physicsMovement;
@@ -22,6 +25,7 @@ public class Player : MonoBehaviour
     private void Start()
     {
         enabled = false;
+        gameObject.SetActive(false);
 
         _physicsMovement = GetComponent<PhysicsMovement>();
         _keyboardInput = GetComponent<KeyboardInput>();
@@ -29,7 +33,7 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        LifeTime += Time.deltaTime;
+        Lifetime += Time.deltaTime;
         OnLifeTimeChanged?.Invoke();
     }
 
@@ -39,12 +43,19 @@ public class Player : MonoBehaviour
             _physicsMovement.Move(_keyboardInput.MoveDirection);
     }
 
-    public void GameOver(GameResult gameResult)
+    public void GameOver(Outcome outcome)
     {
         gameObject.SetActive(false);
         _physicsMovement.SetKinematic(true);
 
-        OnGameOver?.Invoke(gameResult);
+        var results = CreateGameResults(outcome);
+        OnGameOver?.Invoke(results);
+
+        Lifetime = 0;
+        OnLifeTimeChanged?.Invoke();
+
+        enabled = false;
+        _view.gameObject.SetActive(false);
     }
 
     public void Respawn()
@@ -53,7 +64,17 @@ public class Player : MonoBehaviour
 
         gameObject.SetActive(true);
         _physicsMovement.SetKinematic(false);
+    }
 
-        LifeTime = 0;
+    private GameResults CreateGameResults(Outcome outcome)
+    {
+        var resultsAsset = new GameResults();
+
+        resultsAsset.SetLifetime(Lifetime);
+        resultsAsset.SetOutcome(outcome);
+
+        PlayerPrefs.SetString("PreviousResults", JsonUtility.ToJson(resultsAsset));
+
+        return resultsAsset;
     }
 }

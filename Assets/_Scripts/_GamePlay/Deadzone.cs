@@ -1,10 +1,10 @@
 using UnityEngine;
 
-public class Finish : MonoBehaviour
+public class Deadzone : MonoBehaviour
 {
     private void OnTriggerEnter(Collider other)
     {
         if (other.TryGetComponent(out Player player))
-            player.GameOver(GameResult.Victory);
+            player.GameOver(Outcome.Loss);
     }
 }
